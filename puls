@@ -235,5 +235,5 @@ if __name__ == "__main__":
         else:
             root = sys.argv[1] if len(sys.argv) > 1 else "."
             app.find(root, lambda file: print(file))
-    except BrokenPipeError:
+    except (BrokenPipeError, KeyboardInterrupt):
         pass
