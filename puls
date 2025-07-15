@@ -6,14 +6,13 @@ import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, List
 
 
 @dataclass
 class Config:
-    ignore_directories: List[str]
-    ignore_extensions: List[str]
-    ignore_files: List[str]
+    ignore_directories: list[str]
+    ignore_extensions: list[str]
+    ignore_files: list[str]
 
 
 class App:
@@ -22,9 +21,32 @@ class App:
         self.ignore_extensions = self._build_ext(config.ignore_extensions)
         self.ignore_files = config.ignore_files
 
-    def find(self, root: str, callback: Callable[[str], None]):
+    @staticmethod
+    def load_ignore_file(ignore_file_path=None):
+        if ignore_file_path is None:
+            ignore_file_path = Path.cwd() / ".puls.ignore"
+
+        if not ignore_file_path.exists():
+            return []
+
+        try:
+            with ignore_file_path.open("r", encoding="utf-8") as f:
+                return [
+                    line.strip()
+                    for line in f
+                    if line.strip() and not line.strip().startswith("#")
+                ]
+        except (OSError, UnicodeDecodeError):
+            return []
+
+    def find(self, root, callback):
         root_path = Path(root).resolve()
 
+        # Load additional ignore patterns from .puls.ignore
+        additional_ignore = self.load_ignore_file(root_path / ".puls.ignore")
+        all_ignore_files = self.ignore_files + additional_ignore
+
+        found_files = []
         for file_path in root_path.rglob("*"):
             try:
                 if not file_path.is_file():
@@ -44,15 +66,20 @@ class App:
                     relative_path.parts[0] if relative_path.parts else ""
                 ):
                     continue
-                if any(fnmatch.fnmatch(str_path, pattern) for pattern in self.ignore_files):
+                if any(
+                    fnmatch.fnmatch(str_path, pattern) for pattern in all_ignore_files
+                ):
                     continue
 
-                callback(str_path)
+                found_files.append(str_path)
             except (UnicodeDecodeError, OSError, ValueError):
                 continue
 
-    def grep(self, root: str, pattern: re.Pattern):
-        def process_file(file: str):
+        for file in sorted(found_files):
+            callback(file)
+
+    def grep(self, root, pattern):
+        def process_file(file):
             try:
                 file_path = Path(root) / file
                 with file_path.open("r", encoding="utf-8", errors="ignore") as f:
@@ -69,11 +96,11 @@ class App:
         print("sgrep <PATTERN>")
         sys.exit(1)
 
-    def _build_dir(self, patterns: List[str]) -> re.Pattern:
+    def _build_dir(self, patterns):
         escaped_patterns = [re.escape(pattern) for pattern in patterns]
         return re.compile(r"\A(" + "|".join(escaped_patterns) + r")\Z")
 
-    def _build_ext(self, patterns: List[str]) -> re.Pattern:
+    def _build_ext(self, patterns):
         escaped_patterns = [re.escape(pattern) for pattern in patterns]
         return re.compile(r"\.(" + "|".join(escaped_patterns) + r")\Z")
 
