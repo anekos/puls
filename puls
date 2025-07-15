@@ -47,32 +47,34 @@ class App:
         all_ignore_files = self.ignore_files + additional_ignore
 
         found_files = []
-        for file_path in root_path.rglob("*"):
+
+        def should_ignore_dir(dir_name):
+            return self.ignore_directories.match(dir_name)
+
+        stack = [root_path]
+
+        while stack:
+            dir_path = stack.pop()
+
             try:
-                if not file_path.is_file():
-                    continue
+                for item in dir_path.iterdir():
+                    if item.is_dir():
+                        if not should_ignore_dir(item.name):
+                            stack.append(item)
+                    elif item.is_file():
+                        relative_path = item.relative_to(root_path)
+                        str_path = str(relative_path)
 
-                relative_path = file_path.relative_to(root_path)
-                str_path = str(relative_path)
+                        if self.ignore_extensions.search(str_path):
+                            continue
+                        if any(
+                            fnmatch.fnmatch(str_path, pattern)
+                            for pattern in all_ignore_files
+                        ):
+                            continue
 
-                if self.ignore_extensions.search(str_path):
-                    continue
-                if any(
-                    self.ignore_directories.match(part.name)
-                    for part in relative_path.parents
-                ):
-                    continue
-                if self.ignore_directories.match(
-                    relative_path.parts[0] if relative_path.parts else ""
-                ):
-                    continue
-                if any(
-                    fnmatch.fnmatch(str_path, pattern) for pattern in all_ignore_files
-                ):
-                    continue
-
-                found_files.append(str_path)
-            except (UnicodeDecodeError, OSError, ValueError):
+                        found_files.append(str_path)
+            except (PermissionError, OSError, ValueError):
                 continue
 
         for file in sorted(found_files):
