@@ -11,14 +11,12 @@ from pathlib import Path
 @dataclass
 class Config:
     ignore_directories: list[str]
-    ignore_extensions: list[str]
     ignore_files: list[str]
 
 
 class App:
     def __init__(self, config: Config):
         self.ignore_directories = self._build_dir(config.ignore_directories)
-        self.ignore_extensions = self._build_ext(config.ignore_extensions)
         self.ignore_files = config.ignore_files
 
     @staticmethod
@@ -65,8 +63,6 @@ class App:
                         relative_path = item.relative_to(root_path)
                         str_path = str(relative_path)
 
-                        if self.ignore_extensions.search(str_path):
-                            continue
                         if any(
                             fnmatch.fnmatch(str_path, pattern)
                             for pattern in all_ignore_files
@@ -101,10 +97,6 @@ class App:
     def _build_dir(self, patterns):
         escaped_patterns = [re.escape(pattern) for pattern in patterns]
         return re.compile(r"\A(" + "|".join(escaped_patterns) + r")\Z")
-
-    def _build_ext(self, patterns):
-        escaped_patterns = [re.escape(pattern) for pattern in patterns]
-        return re.compile(r"\.(" + "|".join(escaped_patterns) + r")\Z")
 
 
 class Configurations:
@@ -150,54 +142,46 @@ class Configurations:
             "target",
             "vendor",
         ],
-        ignore_extensions=[
-            "bak",
-            "bin",
-            "class",
-            "dll",
-            "dylib",
-            "dyn_c",
-            "dyn_hi",
-            "exe",
-            "fasl",
-            "hi",
-            "jar",
-            "jpeg",
-            "jpg",
-            "lib",
-            "lock",
-            "log",
-            "o",
-            "obj",
-            "pdb",
-            "png",
-            "pyc",
-            "retry",
-            "so",
-            "swp",
-            "temp",
-            "tmp",
-        ],
         ignore_files=[
             "*.bak",
+            "*.bin",
             "*.bundle.*",
             "*.chunk.*",
+            "*.class",
             "*.crt",
             "*.csr",
             "*.db",
+            "*.dll",
             "*.dmp",
+            "*.dylib",
+            "*.dyn_c",
+            "*.dyn_hi",
+            "*.exe",
+            "*.fasl",
+            "*.hi",
+            "*.jar",
+            "*.jpeg",
+            "*.jpg",
             "*.key",
+            "*.lib",
             "*.lock",
             "*.log",
             "*.map",
             "*.min.css",
             "*.min.js",
+            "*.o",
+            "*.obj",
             "*.orig",
             "*.p12",
+            "*.pdb",
             "*.pem",
             "*.pfx",
             "*.pid",
+            "*.png",
+            "*.pyc",
             "*.rej",
+            "*.retry",
+            "*.so",
             "*.sqlite",
             "*.swo",
             "*.swp",
