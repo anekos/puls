@@ -1,0 +1,239 @@
+#!/usr/bin/env python3
+# Smart find
+
+import fnmatch
+import re
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+
+
+@dataclass
+class Config:
+    ignore_directories: list[str]
+    ignore_extensions: list[str]
+    ignore_files: list[str]
+
+
+class App:
+    def __init__(self, config: Config):
+        self.ignore_directories = self._build_dir(config.ignore_directories)
+        self.ignore_extensions = self._build_ext(config.ignore_extensions)
+        self.ignore_files = config.ignore_files
+
+    @staticmethod
+    def load_ignore_file(ignore_file_path=None):
+        if ignore_file_path is None:
+            ignore_file_path = Path.cwd() / ".puls.ignore"
+
+        if not ignore_file_path.exists():
+            return []
+
+        try:
+            with ignore_file_path.open("r", encoding="utf-8") as f:
+                return [
+                    line.strip()
+                    for line in f
+                    if line.strip() and not line.strip().startswith("#")
+                ]
+        except (OSError, UnicodeDecodeError):
+            return []
+
+    def find(self, root, callback):
+        root_path = Path(root).resolve()
+
+        # Load additional ignore patterns from .puls.ignore
+        additional_ignore = self.load_ignore_file(root_path / ".puls.ignore")
+        all_ignore_files = self.ignore_files + additional_ignore
+
+        found_files = []
+
+        def should_ignore_dir(dir_name):
+            return self.ignore_directories.match(dir_name)
+
+        stack = [root_path]
+
+        while stack:
+            dir_path = stack.pop()
+
+            try:
+                for item in dir_path.iterdir():
+                    if item.is_dir():
+                        if not should_ignore_dir(item.name):
+                            stack.append(item)
+                    elif item.is_file():
+                        relative_path = item.relative_to(root_path)
+                        str_path = str(relative_path)
+
+                        if self.ignore_extensions.search(str_path):
+                            continue
+                        if any(
+                            fnmatch.fnmatch(str_path, pattern)
+                            for pattern in all_ignore_files
+                        ):
+                            continue
+
+                        found_files.append(str_path)
+            except (PermissionError, OSError, ValueError):
+                continue
+
+        for file in sorted(found_files):
+            callback(file)
+
+    def grep(self, root, pattern):
+        def process_file(file):
+            try:
+                file_path = Path(root) / file
+                with file_path.open("r", encoding="utf-8", errors="ignore") as f:
+                    for index, line in enumerate(f):
+                        if pattern.search(line):
+                            print(f"{file}:{index}:{line}", end="")
+            except (UnicodeDecodeError, OSError):
+                pass
+
+        self.find(root, process_file)
+
+    def usage(self):
+        print("sfind [<PATH>]")
+        print("sgrep <PATTERN>")
+        sys.exit(1)
+
+    def _build_dir(self, patterns):
+        escaped_patterns = [re.escape(pattern) for pattern in patterns]
+        return re.compile(r"\A(" + "|".join(escaped_patterns) + r")\Z")
+
+    def _build_ext(self, patterns):
+        escaped_patterns = [re.escape(pattern) for pattern in patterns]
+        return re.compile(r"\.(" + "|".join(escaped_patterns) + r")\Z")
+
+
+class Configurations:
+    Standard = Config(
+        ignore_directories=[
+            ".IdeaIC11",
+            ".IdeaIC12",
+            ".IdeaIC13",
+            ".activator",
+            ".aws-sam",
+            ".build",
+            ".bundle",
+            ".cabal-sandbox",
+            ".cabal-sandox",
+            ".cache",
+            ".class",
+            ".coverage",
+            ".dart_tool",
+            ".eggs",
+            ".env",
+            ".git",
+            ".idea",
+            ".mypy_cache",
+            ".next",
+            ".parcel-cache",
+            ".pytest_cache",
+            ".ruff_cache",
+            ".sass-cache",
+            ".stack-work",
+            ".tmpBin",
+            ".tox",
+            ".vagrant",
+            ".venv",
+            "__pycache__",
+            "_darcs",
+            "android",
+            "bower_components",
+            "build",
+            "dist",
+            "ios",
+            "maven_repository",
+            "node_modules",
+            "target",
+            "vendor",
+        ],
+        ignore_extensions=[
+            "bak",
+            "bin",
+            "class",
+            "dll",
+            "dylib",
+            "dyn_c",
+            "dyn_hi",
+            "exe",
+            "fasl",
+            "hi",
+            "jar",
+            "jpeg",
+            "jpg",
+            "lib",
+            "lock",
+            "log",
+            "o",
+            "obj",
+            "pdb",
+            "png",
+            "pyc",
+            "retry",
+            "so",
+            "swp",
+            "temp",
+            "tmp",
+        ],
+        ignore_files=[
+            "*.bak",
+            "*.bundle.*",
+            "*.chunk.*",
+            "*.crt",
+            "*.csr",
+            "*.db",
+            "*.dmp",
+            "*.key",
+            "*.lock",
+            "*.log",
+            "*.map",
+            "*.min.css",
+            "*.min.js",
+            "*.orig",
+            "*.p12",
+            "*.pem",
+            "*.pfx",
+            "*.pid",
+            "*.rej",
+            "*.sqlite",
+            "*.swo",
+            "*.swp",
+            "*.temp",
+            "*.tmp",
+            "*~",
+            ".DS_Store",
+            ".aider.*",
+            ".env.*",
+            "Cargo.lock",
+            "Pipfile.lock",
+            "Thumbs.db",
+            "core.*",
+            "desktop.ini",
+            "package-lock.json",
+            "pnpm-lock.yaml",
+            "poetry.lock",
+            "requirements*.txt",
+            "vgcore.*",
+            "yarn.lock",
+        ],
+    )
+
+
+if __name__ == "__main__":
+    config = Configurations.Standard
+    app = App(config)
+
+    try:
+        if "grep" in Path(sys.argv[0]).name:
+            if not sys.argv[1:]:
+                app.usage()
+            pattern = re.compile(sys.argv[1])
+            app.grep(".", pattern)
+        else:
+            root = sys.argv[1] if len(sys.argv) > 1 else "."
+            app.find(root, lambda file: print(file))
+    except (BrokenPipeError, KeyboardInterrupt):
+        pass
