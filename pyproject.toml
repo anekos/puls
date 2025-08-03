@@ -1,0 +1,14 @@
+[project]
+name = "puls"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "cfn-lint>=1.38.1",
+    "mypy>=1.17.1",
+    "ruff>=0.12.7",
+]
