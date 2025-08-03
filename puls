@@ -49,7 +49,10 @@ class App:
         found_files = []
 
         def should_ignore_dir(dir_name):
-            return any(fnmatch.fnmatch(dir_name, pattern) for pattern in self.ignore_directories)
+            return any(
+                fnmatch.fnmatch(dir_name, pattern)
+                for pattern in self.ignore_directories
+            )
 
         stack = [root_path]
 
@@ -97,7 +100,6 @@ class App:
         print("sfind [<PATH>]")
         print("sgrep <PATTERN>")
         sys.exit(1)
-
 
     def _build_ext(self, patterns):
         escaped_patterns = [re.escape(pattern) for pattern in patterns]
