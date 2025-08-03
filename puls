@@ -17,7 +17,7 @@ class Config:
 
 class App:
     def __init__(self, config: Config):
-        self.ignore_directories = self._build_dir(config.ignore_directories)
+        self.ignore_directories = config.ignore_directories
         self.ignore_extensions = self._build_ext(config.ignore_extensions)
         self.ignore_files = config.ignore_files
 
@@ -49,7 +49,7 @@ class App:
         found_files = []
 
         def should_ignore_dir(dir_name):
-            return self.ignore_directories.match(dir_name)
+            return any(fnmatch.fnmatch(dir_name, pattern) for pattern in self.ignore_directories)
 
         stack = [root_path]
 
@@ -98,9 +98,6 @@ class App:
         print("sgrep <PATTERN>")
         sys.exit(1)
 
-    def _build_dir(self, patterns):
-        escaped_patterns = [re.escape(pattern) for pattern in patterns]
-        return re.compile(r"\A(" + "|".join(escaped_patterns) + r")\Z")
 
     def _build_ext(self, patterns):
         escaped_patterns = [re.escape(pattern) for pattern in patterns]
@@ -110,6 +107,7 @@ class App:
 class Configurations:
     Standard = Config(
         ignore_directories=[
+            "*.egg-info",
             ".IdeaIC11",
             ".IdeaIC12",
             ".IdeaIC13",
@@ -144,6 +142,7 @@ class Configurations:
             "bower_components",
             "build",
             "dist",
+            "elm-stuff",
             "ios",
             "maven_repository",
             "node_modules",
