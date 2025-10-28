@@ -223,7 +223,7 @@ class Configurations:
     )
 
 
-if __name__ == "__main__":
+def main() -> None:
     config = Configurations.Standard
     app = App(config)
 
@@ -238,3 +238,7 @@ if __name__ == "__main__":
             app.find(root, lambda file: print(file))
     except (BrokenPipeError, KeyboardInterrupt):
         pass
+
+
+if __name__ == "__main__":
+    main()
