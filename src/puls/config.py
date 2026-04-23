@@ -1,5 +1,5 @@
 import tomllib
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from pathlib import Path
 
 import platformdirs
@@ -129,14 +129,32 @@ DEFAULT_CONFIG = Config(
 )
 
 
-def load_config() -> Config:
-    config_path = Path(platformdirs.user_config_dir("puls")) / "config.toml"
+def config_dir() -> Path:
+    return Path(platformdirs.user_config_dir("puls"))
 
-    if not config_path.exists():
+
+def config_path() -> Path:
+    return config_dir() / "config.toml"
+
+
+def config_to_toml(config: Config) -> str:
+    lines = ["[ignore]"]
+    for f in fields(config):
+        name = f.name.removeprefix("ignore_")
+        values = getattr(config, f.name)
+        items = ", ".join(f'"{v}"' for v in values)
+        lines.append(f"{name} = [{items}]")
+    return "\n".join(lines) + "\n"
+
+
+def load_config() -> Config:
+    path = config_path()
+
+    if not path.exists():
         return DEFAULT_CONFIG
 
     try:
-        with config_path.open("rb") as f:
+        with path.open("rb") as f:
             data = tomllib.load(f)
     except (OSError, tomllib.TOMLDecodeError):
         return DEFAULT_CONFIG
