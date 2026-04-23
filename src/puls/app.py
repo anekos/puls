@@ -1,6 +1,5 @@
 import fnmatch
 import re
-import sys
 from pathlib import Path
 
 from puls.config import Config
@@ -73,24 +72,6 @@ class App:
 
         for file in sorted(found_files):
             callback(file)
-
-    def grep(self, root: str, pattern: re.Pattern[str]) -> None:
-        def process_file(file: str) -> None:
-            try:
-                file_path = Path(root) / file
-                with file_path.open("r", encoding="utf-8", errors="ignore") as f:
-                    for index, line in enumerate(f):
-                        if pattern.search(line):
-                            print(f"{file}:{index}:{line}", end="")
-            except (UnicodeDecodeError, OSError):
-                pass
-
-        self.find(root, process_file)
-
-    def usage(self) -> None:
-        print("sfind [<PATH>]")
-        print("sgrep <PATTERN>")
-        sys.exit(1)
 
     def _build_ext(self, patterns: list[str]) -> re.Pattern[str]:
         escaped_patterns = [re.escape(pattern) for pattern in patterns]
