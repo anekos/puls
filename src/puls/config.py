@@ -23,7 +23,6 @@ DEFAULT_CONFIG = Config(
         ".build",
         ".bundle",
         ".cabal-sandbox",
-        ".cabal-sandox",
         ".cache",
         ".class",
         ".coverage",
