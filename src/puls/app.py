@@ -1,18 +1,9 @@
-#!/usr/bin/env python3
-# Smart find
-
 import fnmatch
 import re
 import sys
-from dataclasses import dataclass
 from pathlib import Path
 
-
-@dataclass
-class Config:
-    ignore_directories: list[str]
-    ignore_extensions: list[str]
-    ignore_files: list[str]
+from puls.config import Config
 
 
 class App:
@@ -22,7 +13,7 @@ class App:
         self.ignore_files = config.ignore_files
 
     @staticmethod
-    def load_ignore_file(ignore_file_path=None):
+    def load_ignore_file(ignore_file_path: Path | None = None) -> list[str]:
         if ignore_file_path is None:
             ignore_file_path = Path.cwd() / ".puls.ignore"
 
@@ -39,16 +30,16 @@ class App:
         except (OSError, UnicodeDecodeError):
             return []
 
-    def find(self, root, callback):
+    def find(self, root: str, callback) -> None:
         root_path = Path(root).resolve()
 
         # Load additional ignore patterns from .puls.ignore
         additional_ignore = self.load_ignore_file(root_path / ".puls.ignore")
         all_ignore_files = self.ignore_files + additional_ignore
 
-        found_files = []
+        found_files: list[str] = []
 
-        def should_ignore_dir(dir_name):
+        def should_ignore_dir(dir_name: str) -> bool:
             return any(
                 fnmatch.fnmatch(dir_name, pattern)
                 for pattern in self.ignore_directories
@@ -83,8 +74,8 @@ class App:
         for file in sorted(found_files):
             callback(file)
 
-    def grep(self, root, pattern):
-        def process_file(file):
+    def grep(self, root: str, pattern: re.Pattern[str]) -> None:
+        def process_file(file: str) -> None:
             try:
                 file_path = Path(root) / file
                 with file_path.open("r", encoding="utf-8", errors="ignore") as f:
@@ -96,149 +87,11 @@ class App:
 
         self.find(root, process_file)
 
-    def usage(self):
+    def usage(self) -> None:
         print("sfind [<PATH>]")
         print("sgrep <PATTERN>")
         sys.exit(1)
 
-    def _build_ext(self, patterns):
+    def _build_ext(self, patterns: list[str]) -> re.Pattern[str]:
         escaped_patterns = [re.escape(pattern) for pattern in patterns]
         return re.compile(r"\.(" + "|".join(escaped_patterns) + r")\Z")
-
-
-class Configurations:
-    Standard = Config(
-        ignore_directories=[
-            "*.egg-info",
-            ".IdeaIC11",
-            ".IdeaIC12",
-            ".IdeaIC13",
-            ".activator",
-            ".aws-sam",
-            ".build",
-            ".bundle",
-            ".cabal-sandbox",
-            ".cabal-sandox",
-            ".cache",
-            ".class",
-            ".coverage",
-            ".dart_tool",
-            ".eggs",
-            ".env",
-            ".git",
-            ".idea",
-            ".mypy_cache",
-            ".next",
-            ".parcel-cache",
-            ".pytest_cache",
-            ".ruff_cache",
-            ".sass-cache",
-            ".stack-work",
-            ".tmpBin",
-            ".tox",
-            ".vagrant",
-            ".venv",
-            "__pycache__",
-            "_darcs",
-            "android",
-            "bower_components",
-            "build",
-            "dist",
-            "elm-stuff",
-            "ios",
-            "maven_repository",
-            "node_modules",
-            "target",
-            "vendor",
-        ],
-        ignore_extensions=[
-            "bak",
-            "bin",
-            "class",
-            "dll",
-            "dylib",
-            "dyn_c",
-            "dyn_hi",
-            "exe",
-            "fasl",
-            "hi",
-            "jar",
-            "jpeg",
-            "jpg",
-            "lib",
-            "lock",
-            "log",
-            "o",
-            "obj",
-            "pdb",
-            "png",
-            "pyc",
-            "retry",
-            "so",
-            "swp",
-            "temp",
-            "tmp",
-        ],
-        ignore_files=[
-            "*.bak",
-            "*.bundle.*",
-            "*.chunk.*",
-            "*.crt",
-            "*.csr",
-            "*.db",
-            "*.dmp",
-            "*.key",
-            "*.lock",
-            "*.log",
-            "*.map",
-            "*.min.css",
-            "*.min.js",
-            "*.orig",
-            "*.p12",
-            "*.pem",
-            "*.pfx",
-            "*.pid",
-            "*.rej",
-            "*.sqlite",
-            "*.swo",
-            "*.swp",
-            "*.temp",
-            "*.tmp",
-            "*~",
-            ".DS_Store",
-            ".aider.*",
-            ".env.*",
-            "Cargo.lock",
-            "Pipfile.lock",
-            "Thumbs.db",
-            "core.*",
-            "desktop.ini",
-            "package-lock.json",
-            "pnpm-lock.yaml",
-            "poetry.lock",
-            "requirements*.txt",
-            "vgcore.*",
-            "yarn.lock",
-        ],
-    )
-
-
-def main() -> None:
-    config = Configurations.Standard
-    app = App(config)
-
-    try:
-        if "grep" in Path(sys.argv[0]).name:
-            if not sys.argv[1:]:
-                app.usage()
-            pattern = re.compile(sys.argv[1])
-            app.grep(".", pattern)
-        else:
-            root = sys.argv[1] if len(sys.argv) > 1 else "."
-            app.find(root, lambda file: print(file))
-    except (BrokenPipeError, KeyboardInterrupt):
-        pass
-
-
-if __name__ == "__main__":
-    main()
