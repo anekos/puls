@@ -5,8 +5,8 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "app-paths>=0.0.8",
     "click>=8.3.3",
+    "platformdirs>=4.9.6",
 ]
 
 [project.scripts]
@@ -15,10 +15,6 @@ puls = "puls.main:main"
 [build-system]
 requires = ["uv_build>=0.9.5,<0.10.0"]
 build-backend = "uv_build"
-
-[[tool.mypy.overrides]]
-module = "app_paths"
-ignore_missing_imports = true
 
 [dependency-groups]
 dev = [

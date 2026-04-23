@@ -2,7 +2,7 @@ import tomllib
 from dataclasses import dataclass, fields
 from pathlib import Path
 
-from app_paths import get_paths
+from platformdirs.unix import Unix
 
 
 @dataclass
@@ -130,7 +130,7 @@ DEFAULT_CONFIG = Config(
 
 
 def config_dir() -> Path:
-    return get_paths("puls").user_config_path
+    return Path(Unix("puls").user_config_dir)
 
 
 def config_path() -> Path:
