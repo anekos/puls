@@ -4,10 +4,12 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "platformdirs>=4.9.6",
+]
 
 [project.scripts]
-puls = "puls.app:main"
+puls = "puls.main:main"
 
 [build-system]
 requires = ["uv_build>=0.9.5,<0.10.0"]
